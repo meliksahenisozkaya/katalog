@@ -35,6 +35,10 @@ body{background:var(--desk);color:var(--ink);font-family:var(--f-ui);overflow:hi
   transition:background .2s,border-color .2s,color .2s}
 .btn:hover{background:rgba(216,182,117,.1);border-color:rgba(216,182,117,.5)}
 .btn:focus-visible,.navside:focus-visible,.thumb:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+a.btn{text-decoration:none}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:var(--desk);font-weight:600}
+.lbl-s{display:none}
+.btn.primary:hover{background:#E6C88C;border-color:#E6C88C}
 .btn:disabled{opacity:.35;cursor:default;background:transparent}
 .btn svg{width:18px;height:18px;flex:none}
 .stage{flex:1;position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
@@ -85,7 +89,7 @@ body{background:var(--desk);color:var(--ink);font-family:var(--f-ui);overflow:hi
 .zoomwrap{flex:1;overflow:auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .zoomrow{display:flex;justify-content:center;width:max-content;min-width:100%;margin:0 auto}
 .zoomrow img{width:min(1200px,calc(100vw - 32px));height:auto;display:block;box-shadow:0 10px 30px rgba(0,0,0,.5)}
-@media (max-width:560px){.brand span{display:none}.btn .lbl{display:none}}
+@media (max-width:560px){.brand span{display:none}.btn .lbl{display:none}.btn .lbl-s{display:inline}}
 @media (prefers-reduced-motion:reduce){.bookpos,.pshadow{transition:none}}
 </style>
 </head>
@@ -94,6 +98,7 @@ body{background:var(--desk);color:var(--ink);font-family:var(--f-ui);overflow:hi
   <header class="bar top">
     <div class="brand"><b>Halis Fındık</b><span><i>产品目录</i>Product Catalogue · A5</span></div>
     <div class="tools">
+      <a class="btn primary" id="pdfBtn" href="Halis_Findik_Katalog_A5.pdf" download="Halis_Findik_Katalog_A5.pdf" aria-label="Kataloğu PDF olarak indir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></svg><span class="lbl">PDF İndir</span><span class="lbl-s">PDF</span></a>
       <button class="btn" id="zoomBtn" type="button" aria-label="Sayfayı büyüt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M11 8.5v5M8.5 11h5"/></svg><span class="lbl">Büyüt</span></button>
       <button class="btn" id="gridBtn" type="button" aria-label="Tüm sayfalar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/></svg><span class="lbl">Sayfalar</span></button>
       <button class="btn" id="fsBtn" type="button" aria-label="Tam ekran"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
