@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>Halis Fındık Dijital Katalog</title>
 <meta name="description" content="Halis Fındık 产品目录 · Product Catalogue · Каталог продукции">
 <meta property="og:title" content="Halis Fındık · 产品目录 Product Catalogue">
@@ -13,12 +13,12 @@
 /* Layout: a dark lacquer reading desk; the A5 booklet sits centred, toolbar above, page rail below. Single deliberate dark look. */
 :root{
   --desk:#1A0B09; --desk-2:#2E1310; --ink:#F4E7CF; --muted:#BCA88A; --gold:#D8B675; --lacquer:#8E1A1C;
-  --line:rgba(216,182,117,.24); --paper-edge:#E4D6BC; --veil:rgba(14,6,5,.92);
+  --line:rgba(216,182,117,.24); --paper-edge:#E4D6BC; --veil:#140806;
   --f-display:'Noto Serif SC','Songti SC','Noto Serif CJK SC',Georgia,serif;
   --f-ui:'Noto Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
   color-scheme:dark;
 }
-html,body{height:100%}
+html,body{height:100%;touch-action:pan-x pan-y}
 body{background:var(--desk);color:var(--ink);font-family:var(--f-ui);overflow:hidden;-webkit-tap-highlight-color:transparent}
 .app{height:100%;display:flex;flex-direction:column;
   background:radial-gradient(ellipse 80% 70% at 50% 46%,var(--desk-2) 0%,var(--desk) 70%)}
@@ -48,7 +48,8 @@ a.btn{text-decoration:none}
 .pshadow{position:absolute;top:0;width:var(--pw);height:var(--ph);transition:opacity .35s;
   box-shadow:0 24px 48px -12px rgba(0,0,0,.7),0 4px 10px rgba(0,0,0,.35)}
 .pshadow.l{left:0}.pshadow.r{left:var(--pw)}
-.leaf{position:absolute;left:var(--pw);top:0;width:var(--pw);height:var(--ph);transform-origin:0 50%;transform-style:preserve-3d;will-change:transform}
+.leaf{position:absolute;left:var(--pw);top:0;width:var(--pw);height:var(--ph);transform-origin:0 50%;transform-style:preserve-3d}
+.app.ovopen .bookpos{display:none}
 .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;background:var(--paper-edge)}
 .face img{width:100%;height:100%;display:block;pointer-events:none;-webkit-user-drag:none}
 .face.back{transform:rotateY(180deg)}
@@ -86,9 +87,19 @@ a.btn{text-decoration:none}
 .thumb span{font:500 12px/1 var(--f-ui);font-variant-numeric:tabular-nums}
 .thumb:hover span,.thumb.on span{color:var(--gold)}
 .thumb.on .pair{outline:2px solid var(--gold);outline-offset:3px}
-.zoomwrap{flex:1;overflow:auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.zoomrow{display:flex;justify-content:center;width:max-content;min-width:100%;margin:0 auto}
-.zoomrow img{width:min(1200px,calc(100vw - 32px));height:auto;display:block;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.zstage{flex:1;position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;cursor:zoom-in}
+.zstage.zoomed{cursor:grab}
+#zimg{position:absolute;left:0;top:0;max-width:none;display:block;box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:none;-webkit-user-drag:none;background:var(--paper-edge)}
+.zarrow{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;border:0;border-radius:10px;background:rgba(20,8,6,.6);color:var(--gold);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;transition:opacity .2s}
+.zarrow svg{width:26px;height:26px}
+.zarrow.prev{left:max(8px,env(safe-area-inset-left,0px))}.zarrow.next{right:max(8px,env(safe-area-inset-right,0px))}
+.zarrow:disabled{opacity:.15;cursor:default}
+.zstage.zoomed .zarrow:not(:disabled){opacity:.4}
+.zhint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:rgba(20,8,6,.75);border:1px solid var(--line);
+  padding:6px 12px;border-radius:999px;white-space:nowrap;pointer-events:none;transition:opacity .6s;z-index:3}
+.zhint.gone{opacity:0}
+.ztools{display:flex;gap:6px;flex:none}
 @media (max-width:560px){.brand span{display:none}.btn .lbl{display:none}.btn .lbl-s{display:inline}}
 @media (prefers-reduced-motion:reduce){.bookpos,.pshadow{transition:none}}
 </style>
@@ -127,14 +138,22 @@ a.btn{text-decoration:none}
   <div class="grid" id="grid"></div>
 </div>
 <div class="overlay" id="zoomOv" hidden role="dialog" aria-label="Büyütülmüş görünüm">
-  <div class="bar"><h2 id="zoomTitle">Sayfa</h2><button class="btn" id="zoomClose" type="button" aria-label="Kapat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-  <div class="zoomwrap"><div class="zoomrow" id="zoomRow"></div></div>
+  <div class="bar"><h2 id="zoomTitle">Sayfa</h2><div class="ztools">
+    <button class="btn" id="zOut" type="button" aria-label="Uzaklaştır"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M8.5 11h5"/></svg></button>
+    <button class="btn" id="zIn" type="button" aria-label="Yakınlaştır"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M11 8.5v5M8.5 11h5"/></svg></button>
+    <button class="btn" id="zoomClose" type="button" aria-label="Kapat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>
+  <div class="zstage" id="zstage"><img id="zimg" alt="" draggable="false">
+    <button class="zarrow prev" id="zPrev" type="button" aria-label="Önceki sayfa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="zarrow next" id="zNext" type="button" aria-label="Sonraki sayfa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+    <div class="zhint" id="zhint">İki parmakla yakınlaştırın · çift dokunun</div></div>
 </div>
 
 <script>
 (function(){
 const N=24, L=12, AR=1200/1703;
 const src=n=>'pages/p'+String(n).padStart(2,'0')+'.jpg';
+const hd=n=>'pages/h'+String(n).padStart(2,'0')+'.jpg';
+const th=n=>'pages/t'+String(n).padStart(2,'0')+'.jpg';
 const $=id=>document.getElementById(id);
 const app=$('app'), stage=$('stage'), book=$('book'), bookpos=$('bookpos');
 const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -143,11 +162,19 @@ let pw=300, ph=425, narrow=false, cur=0, focus='R';
 const leaves=[];
 for(let i=0;i<L;i++){
   const el=document.createElement('div'); el.className='leaf'+(i===0?' cover':'')+(i===L-1?' last':'');
-  el.innerHTML='<div class="face front"><img alt="Sayfa '+(2*i+1)+'" draggable="false" decoding="async" src="'+src(2*i+1)+'"><div class="dyn"></div></div>'+
-               '<div class="face back"><img alt="Sayfa '+(2*i+2)+'" draggable="false" decoding="async" src="'+src(2*i+2)+'"><div class="dyn"></div></div>';
+  el.innerHTML='<div class="face front"><img alt="Sayfa '+(2*i+1)+'" draggable="false" decoding="async" data-src="'+src(2*i+1)+'"><div class="dyn"></div></div>'+
+               '<div class="face back"><img alt="Sayfa '+(2*i+2)+'" draggable="false" decoding="async" data-src="'+src(2*i+2)+'"><div class="dyn"></div></div>';
   book.appendChild(el);
   const d=el.querySelectorAll('.dyn');
-  leaves.push({el,i,a:0,raf:0,busy:false,fd:d[0],bd:d[1]});
+  leaves.push({el,i,a:0,raf:0,busy:false,loaded:false,fd:d[0],bd:d[1]});
+}
+/* only the leaves around the open spread are rendered: keeps phone memory low */
+function vis(){
+  leaves.forEach(lf=>{
+    const show=lf.busy||(lf.i>=cur-2&&lf.i<=cur+1);
+    if(show&&!lf.loaded){lf.loaded=true;lf.el.querySelectorAll('img[data-src]').forEach(im=>{im.src=im.dataset.src;});}
+    lf.el.style.display=show?'':'none';
+  });
 }
 function paint(lf){
   const t=-lf.a/180;
@@ -160,12 +187,12 @@ const ease=p=>p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;
 function animate(lf,to,dur,delay){
   cancelAnimationFrame(lf.raf);
   const from=lf.a; dur=reduce?0:dur*Math.abs(to-from)/180;
-  if(dur<=0){lf.a=to;lf.busy=false;paint(lf);return;}
-  const t0=performance.now()+(delay||0); lf.busy=true;
+  if(dur<=0){lf.a=to;lf.busy=false;lf.el.style.willChange='';paint(lf);return;}
+  const t0=performance.now()+(delay||0); lf.busy=true; lf.el.style.willChange='transform';
   const step=now=>{
     const p=Math.min(1,Math.max(0,(now-t0)/dur));
     lf.a=from+(to-from)*ease(p); lf.busy=p<1; paint(lf);
-    if(p<1) lf.raf=requestAnimationFrame(step);
+    if(p<1) lf.raf=requestAnimationFrame(step); else {lf.el.style.willChange='';vis();}
   };
   lf.raf=requestAnimationFrame(step);
 }
@@ -209,6 +236,7 @@ function update(instant){
   const atStart=narrow?(p===1):(cur===0), atEnd=narrow?(p===N):(cur===L);
   $('prevBtn').disabled=$('sidePrev').disabled=atStart; $('nextBtn').disabled=$('sideNext').disabled=atEnd;
   try{ history.replaceState(null,'','#sayfa-'+p); }catch(e){}
+  vis();
 }
 const FLIP=900;
 function next(){
@@ -254,7 +282,7 @@ stage.addEventListener('pointermove',e=>{
     drag.moved=true;
     if(!narrow){
       const idx=drag.fwd?cur:cur-1;
-      if(idx>=0&&idx<L){drag.lf=leaves[idx];cancelAnimationFrame(drag.lf.raf);drag.lf.busy=true;drag.a0=drag.lf.a;stage.classList.add('grabbing');}
+      if(idx>=0&&idx<L){drag.lf=leaves[idx];cancelAnimationFrame(drag.lf.raf);drag.lf.busy=true;drag.lf.el.style.willChange='transform';drag.a0=drag.lf.a;stage.classList.add('grabbing');}
     }
   }
   if(drag.lf){
@@ -285,6 +313,11 @@ $('seek').addEventListener('input',e=>{hideHint(); const v=+e.target.value; goPa
 document.addEventListener('keydown',e=>{
   const ov=!$('gridOv').hidden||!$('zoomOv').hidden;
   if(e.key==='Escape'&&ov){closeOv();return;}
+  if(!$('zoomOv').hidden){
+    if(e.key==='ArrowRight'){e.preventDefault();zgo(1);} else if(e.key==='ArrowLeft'){e.preventDefault();zgo(-1);}
+    else if(e.key==='+'||e.key==='='){zto(zs*1.5);} else if(e.key==='-'){zto(zs/1.5);}
+    return;
+  }
   if(ov) return;
   if(e.target.id==='seek'&&(e.key==='ArrowLeft'||e.key==='ArrowRight')) return;
   if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();hideHint();next();}
@@ -297,25 +330,88 @@ const grid=$('grid'); const spreads=[[1]];
 for(let p=2;p<N;p+=2) spreads.push([p,p+1]); spreads.push([N]);
 spreads.forEach(s=>{
   const b=document.createElement('button'); b.type='button'; b.className='thumb'; b.dataset.p=s[0];
-  b.innerHTML='<div class="pair">'+s.map(p=>'<img loading="lazy" alt="Sayfa '+p+'" src="'+src(p)+'">').join('')+'</div><span>'+s.map(p=>String(p).padStart(2,'0')).join('–')+'</span>';
+  b.innerHTML='<div class="pair">'+s.map(p=>'<img loading="lazy" alt="Sayfa '+p+'" src="'+th(p)+'">').join('')+'</div><span>'+s.map(p=>String(p).padStart(2,'0')).join('–')+'</span>';
   b.onclick=()=>{closeOv(); goPage(s[0]);};
   grid.appendChild(b);
 });
 let lastFocus=null;
-function openOv(id){ lastFocus=document.activeElement; $(id).hidden=false; const c=$(id).querySelector('.btn'); c&&c.focus(); }
-function closeOv(){ $('gridOv').hidden=true; $('zoomOv').hidden=true; lastFocus&&lastFocus.focus&&lastFocus.focus(); }
+function openOv(id){ lastFocus=document.activeElement; $(id).hidden=false; app.classList.add('ovopen'); const c=$(id).querySelector('#zoomClose,#gridClose'); c&&c.focus(); }
+function closeOv(){ $('gridOv').hidden=true; $('zoomOv').hidden=true; app.classList.remove('ovopen'); zimg.removeAttribute('src'); lastFocus&&lastFocus.focus&&lastFocus.focus(); }
 $('gridBtn').onclick=()=>{
   const p=pageNow(); grid.querySelectorAll('.thumb').forEach(t=>{const s=+t.dataset.p; t.classList.toggle('on',p===s||p===s+1&&s>1&&s<N);});
   openOv('gridOv'); const on=grid.querySelector('.thumb.on'); on&&on.scrollIntoView({block:'center'});
 };
 $('gridClose').onclick=closeOv; $('zoomClose').onclick=closeOv;
-$('zoomBtn').onclick=()=>{
-  let pages;
-  if(narrow||cur===0||cur===L) pages=[pageNow()]; else pages=[2*cur,2*cur+1];
-  $('zoomRow').innerHTML=pages.map(p=>'<img alt="Sayfa '+p+'" src="'+src(p)+'">').join('');
-  $('zoomTitle').textContent='Sayfa '+pages.map(p=>String(p).padStart(2,'0')).join('–');
-  openOv('zoomOv'); $('zoomOv').querySelector('.zoomwrap').scrollTop=0;
-};
+/* zoom viewer: one page at a time, own pinch / pan / double-tap zoom (the browser's page zoom stays off) */
+const zst=$('zstage'), zimg=$('zimg'), ZMAX=4;
+let zp=1, zs=1, zx=0, zy=0, bw=0, bh=0, zW=0, zH=0;
+function zfit(){ zW=zst.clientWidth; zH=zst.clientHeight; const pad=zW<600?8:20;
+  bw=Math.min(zW-2*pad,(zH-2*pad)*AR); bh=bw/AR; zs=1; zdraw(); }
+function zdraw(){
+  const w=bw*zs, h=bh*zs;
+  zx = w<=zW ? (zW-w)/2 : Math.min(0,Math.max(zW-w,zx));
+  zy = h<=zH ? (zH-h)/2 : Math.min(0,Math.max(zH-h,zy));
+  zimg.style.width=w+'px'; zimg.style.height=h+'px'; zimg.style.left=zx+'px'; zimg.style.top=zy+'px';
+  zst.classList.toggle('zoomed',zs>1.01); $('zOut').disabled=zs<=1.01; $('zIn').disabled=zs>=ZMAX-.01;
+}
+function zto(ns,px,py){ ns=Math.max(1,Math.min(ZMAX,ns)); if(px==null){px=zW/2;py=zH/2;}
+  zx=px-(px-zx)*(ns/zs); zy=py-(py-zy)*(ns/zs); zs=ns; zdraw(); }
+function zload(p){
+  zp=Math.max(1,Math.min(N,p)); zimg.src=src(zp); zimg.alt='Sayfa '+zp;
+  const big=new Image(); const want=zp; big.onload=()=>{ if(zp===want&&!$('zoomOv').hidden) zimg.src=big.src; }; big.src=hd(zp);
+  $('zoomTitle').textContent='Sayfa '+String(zp).padStart(2,'0')+' / '+N;
+  $('zPrev').disabled=zp<=1; $('zNext').disabled=zp>=N; zfit();
+}
+function zgo(d){ zload(zp+d); }
+$('zPrev').onclick=()=>zgo(-1); $('zNext').onclick=()=>zgo(1);
+$('zIn').onclick=()=>zto(zs*1.6); $('zOut').onclick=()=>zto(zs/1.6);
+const pts=new Map(); let g=null, lastTap=0, lastTX=0, lastTY=0;
+function rel(e){ const r=zst.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
+function zbegin(){
+  const v=[...pts.values()];
+  if(v.length===1) g={type:'pan',x0:v[0].x,y0:v[0].y,tx0:zx,ty0:zy,moved:false};
+  else if(v.length>=2){ const a=v[0],b=v[1];
+    g={type:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y)||1,s0:zs,mx0:(a.x+b.x)/2,my0:(a.y+b.y)/2,tx0:zx,ty0:zy}; }
+  else g=null;
+}
+zst.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.zarrow')) return;
+  $('zhint').classList.add('gone');
+  try{zst.setPointerCapture(e.pointerId);}catch(_){}
+  pts.set(e.pointerId,rel(e)); zbegin();
+});
+zst.addEventListener('pointermove',e=>{
+  if(!pts.has(e.pointerId)||!g) return;
+  pts.set(e.pointerId,rel(e)); const v=[...pts.values()];
+  if(g.type==='pan'){
+    const dx=v[0].x-g.x0, dy=v[0].y-g.y0;
+    if(Math.abs(dx)+Math.abs(dy)>6) g.moved=true;
+    if(zs>1.01){ zx=g.tx0+dx; zy=g.ty0+dy; zdraw(); }
+  } else if(v.length>=2){
+    const a=v[0],b=v[1], d=Math.hypot(a.x-b.x,a.y-b.y), mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    const ns=Math.max(1,Math.min(ZMAX,g.s0*d/g.d0));
+    zx=mx-(g.mx0-g.tx0)*(ns/g.s0); zy=my-(g.my0-g.ty0)*(ns/g.s0); zs=ns; zdraw();
+  }
+});
+function zend(e){
+  if(!pts.has(e.pointerId)) return;
+  const p=rel(e); pts.delete(e.pointerId);
+  if(g&&g.type==='pan'&&e.type==='pointerup'){
+    const dx=p.x-g.x0, dy=p.y-g.y0;
+    if(!g.moved){
+      const now=performance.now();
+      if(now-lastTap<320&&Math.hypot(p.x-lastTX,p.y-lastTY)<30){ zs>1.01?zto(1):zto(2.5,p.x,p.y); lastTap=0; }
+      else { lastTap=now; lastTX=p.x; lastTY=p.y; }
+    } else if(zs<=1.01&&Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){ zgo(dx<0?1:-1); }
+  }
+  zbegin();
+}
+zst.addEventListener('pointerup',zend); zst.addEventListener('pointercancel',zend);
+zst.addEventListener('wheel',e=>{ e.preventDefault(); const p=rel(e); zto(zs*Math.exp(-e.deltaY*0.0015),p.x,p.y); },{passive:false});
+zst.addEventListener('dblclick',e=>e.preventDefault());
+$('zoomBtn').onclick=()=>{ openOv('zoomOv'); zload(pageNow()); };
+/* iOS Safari: keep its own page pinch-zoom off; the viewer above handles zoom */
+['gesturestart','gesturechange'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 
 /* fullscreen (optional where the frame allows it) */
 const fsBtn=$('fsBtn');
@@ -332,7 +428,7 @@ setTimeout(hideHint,7000);
 let start=1; const m=/^#sayfa-(\d+)$/.exec(location.hash||''); if(m) start=+m[1];
 layout(); if(start>1) goPage(start,true);
 window.addEventListener('hashchange',()=>{const m=/^#sayfa-(\d+)$/.exec(location.hash||''); if(m&&+m[1]!==pageNow()) goPage(+m[1]);});
-let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(layout,80);});
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{layout(); if(!$('zoomOv').hidden) zfit();},80);});
 })();
 </script>
 
